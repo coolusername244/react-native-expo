@@ -1,5 +1,8 @@
 import { View, Image, ImageProps } from 'react-native';
-import { TapGestureHandler } from 'react-native-gesture-handler';
+import {
+  TapGestureHandler,
+  PanGestureHandler,
+} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -13,11 +16,37 @@ type EmojiStickerProps = {
 };
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
+const AnimatedView = Animated.createAnimatedComponent(View);
 
 export default function EmojiSticker({
   imageSize,
   stickerSource,
 }: EmojiStickerProps) {
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  const onDrag = useAnimatedGestureHandler({
+    onStart: (event, context) => {
+      context.translateX = translateX.value;
+      context.translateY = translateY.value;
+    },
+    onActive: (event, context) => {
+      translateX.value = context.translateX + event.translationX;
+      translateY.value = context.translateY + event.translationY;
+    },
+  });
+
+  console.log(translateX.value, translateY.value);
+
+  const containerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+      ],
+    };
+  });
+
   const scaleImage = useSharedValue(imageSize);
 
   const onDoubleTap = useAnimatedGestureHandler({
@@ -36,14 +65,16 @@ export default function EmojiSticker({
   });
 
   return (
-    <View style={{ top: -350 }}>
-      <TapGestureHandler onGestureEvent={onDoubleTap} numberOfTaps={2}>
-        <AnimatedImage
-          source={stickerSource}
-          resizeMode="contain"
-          style={[imageStyle, { width: imageSize, height: imageSize }]}
-        />
-      </TapGestureHandler>
-    </View>
+    <PanGestureHandler onGestureEvent={onDrag}>
+      <AnimatedView style={[containerStyle, { top: -350 }]}>
+        <TapGestureHandler onGestureEvent={onDoubleTap} numberOfTaps={2}>
+          <AnimatedImage
+            source={stickerSource}
+            resizeMode="contain"
+            style={[imageStyle, { width: imageSize, height: imageSize }]}
+          />
+        </TapGestureHandler>
+      </AnimatedView>
+    </PanGestureHandler>
   );
 }
